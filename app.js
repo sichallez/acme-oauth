@@ -20,6 +20,7 @@ app.get('/api/auth', async(req, res, next)=> {
 
 app.get('/github/callback', async(req, res, next)=> {
   try {
+    // console.log(req.query.code);
     const token = await User.authenticate(req.query.code);
     res.send(`
       <html>

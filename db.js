@@ -37,16 +37,24 @@ User.byToken = async(token)=> {
 const GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token';
 const GITHUB_USER_URL = 'https://api.github.com/user';
 
-//the authenticate methods is passed a code which has been sent by github
+//the authenticate methods is passed a code which has been sent by github (everytime the code returned is different)
 //if successful it will return a token which identifies a user in this app
 User.authenticate = async(code)=> {
-  throw new Error('noooooooooo');
 
   //consider modifying /github/callback route in app.js in order to test incrementally
   //(STEP 1) TODO - make axios post to GITHUB_TOKEN_URL with code, client_id, client_secret;
   /*
    * use { headers: { accept: 'application/json' }} for easier response handling
    */
+    let response = await axios.post(GITHUB_TOKEN_URL, {
+      code, 
+      client_id: process.env.GITHUB_CLIENT_ID,
+      client_secret: process.env.GITHUB_CLIENT_SECRET
+      }, 
+      { headers: { accept: 'application/json' }}
+    );
+
+    // console.log(response.data);
 
   //(STEP 2) TODO - use access_token from response to make get request to GITHUB_USER_URL
   //send header with Authorization and value 'token whatever_access_token_is'
@@ -56,10 +64,30 @@ User.authenticate = async(code)=> {
     }
   */
 
+    const { access_token } = response.data;
+    response = await axios.get(GITHUB_USER_URL, {
+      headers: {
+        Authorization: `token ${access_token}`
+      }
+    });
+
+    // console.log(response.data);
+
   //(STEP 3) TODO - use the login value from github to identify user in app
   //login from github should map to username in application
   //if the user does not exist, create the user
   //return a JWT token which has an id property with the users id
+
+  const userProfile = response.data;
+  let user = await User.findOne({
+    where: { username: userProfile.login }
+  });
+  if (!user) {
+    user = await User.create({ username: userProfile.login, userProfile });
+  };
+
+  // console.log(user);
+  return jwt.sign({ id: user.id }, process.env.JWT);
 };
 
 const syncAndSeed = async()=> {
